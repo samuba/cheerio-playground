@@ -4,24 +4,48 @@
   import Prism from 'prismjs';
   import 'prismjs/components/prism-markup.js';
 
-  let htmlInput = $state(`<h1>Hello, Cheerio!</h1>
+  const STORAGE_KEY = 'cheerio-playground-html';
+  const defaultHtml = `<h1>Hello, Cheerio!</h1>
 <p class="main">This is a paragraph to parse.</p>
 <ul>
     <li class="item">Item 1</li>
     <li class="item">Item 2</li>
     <li class="item">Item 3</li>
-</ul>`);
+</ul>`;
+
+  let htmlInput = $state(defaultHtml);
 
   let cheerioCode = $state(`$('.item')`);
   let outputItems = $state([]);
   let isError = $state(false);
 
+  let htmlHighlightRef = $state(null);
+  let codeHighlightRef = $state(null);
+
+  // Save HTML input to localStorage when it changes (debounced)
+  $effect(() => {
+    const value = htmlInput;
+    const timeout = setTimeout(() => {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, value);
+      }
+    }, 1000);
+    return () => clearTimeout(timeout);
+  });
+
   function highlightHtml(code) {
     return Prism.highlight(code, Prism.languages.markup, 'markup');
   }
 
-  let highlightedInput = $derived(highlightHtml(htmlInput));
-  let highlightedCode = $derived(highlightHtml(cheerioCode));
+  let highlightedInput = $derived(highlightHtml(htmlInput + '\n'));
+  let highlightedCode = $derived(highlightHtml(cheerioCode + '\n'));
+
+  function syncScroll(textarea, highlightEl) {
+    if (highlightEl) {
+      highlightEl.scrollTop = textarea.scrollTop;
+      highlightEl.scrollLeft = textarea.scrollLeft;
+    }
+  }
 
   function prettyPrintHtml(html) {
     const tab = '  ';
@@ -89,6 +113,11 @@
   }
 
   onMount(() => {
+    // Load saved HTML from localStorage
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved !== null) {
+      htmlInput = saved;
+    }
     execute();
   });
 </script>
@@ -122,11 +151,12 @@
         <label for="html-input">HTML Input</label>
       </div>
       <div class="editor-container">
-        <pre class="editor-highlight" aria-hidden="true"><code>{@html highlightedInput}</code></pre>
+        <pre class="editor-highlight" aria-hidden="true" bind:this={htmlHighlightRef}><code>{@html highlightedInput}</code></pre>
         <textarea
           id="html-input"
           bind:value={htmlInput}
           onkeydown={handleKeydown}
+          onscroll={(e) => syncScroll(e.target, htmlHighlightRef)}
           placeholder="Enter HTML here..."
           spellcheck="false"
         ></textarea>
@@ -145,11 +175,12 @@
         <span class="hint">Use $ to access the loaded document</span>
       </div>
       <div class="editor-container">
-        <pre class="editor-highlight" aria-hidden="true"><code>{@html highlightedCode}</code></pre>
+        <pre class="editor-highlight" aria-hidden="true" bind:this={codeHighlightRef}><code>{@html highlightedCode}</code></pre>
         <textarea
           id="cheerio-code"
           bind:value={cheerioCode}
           onkeydown={handleKeydown}
+          onscroll={(e) => syncScroll(e.target, codeHighlightRef)}
           placeholder="$('.selector')"
           spellcheck="false"
         ></textarea>
@@ -310,6 +341,7 @@
   .editor-container {
     position: relative;
     background: var(--bg-input);
+    overflow: hidden;
   }
 
   .editor-highlight {
@@ -325,16 +357,21 @@
     line-height: 1.5;
     white-space: pre-wrap;
     word-wrap: break-word;
-    overflow: hidden;
+    overflow: auto;
     pointer-events: none;
     color: var(--text-primary);
     background: transparent;
+  }
+
+  .editor-highlight::-webkit-scrollbar {
+    display: none;
   }
 
   .editor-highlight code {
     font-family: inherit;
     font-size: inherit;
     line-height: inherit;
+    display: block;
   }
 
   textarea {
@@ -350,6 +387,7 @@
     font-size: 0.75rem;
     line-height: 1.5;
     padding: 0.75rem;
+    overflow: auto;
   }
 
   .html-panel .editor-container {
