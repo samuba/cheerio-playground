@@ -37,8 +37,26 @@
     return Prism.highlight(code, Prism.languages.markup, 'markup');
   }
 
-  let highlightedInput = $derived(highlightHtml(htmlInput + '\n'));
-  let highlightedCode = $derived(highlightHtml(cheerioCode + '\n'));
+  let highlightedInput = $state('');
+  let highlightedCode = $state('');
+
+  // Debounced syntax highlighting for HTML input
+  $effect(() => {
+    const value = htmlInput + '\n';
+    const timeout = setTimeout(() => {
+      highlightedInput = highlightHtml(value);
+    }, 50);
+    return () => clearTimeout(timeout);
+  });
+
+  // Debounced syntax highlighting for code input
+  $effect(() => {
+    const value = cheerioCode + '\n';
+    const timeout = setTimeout(() => {
+      highlightedCode = highlightHtml(value);
+    }, 50);
+    return () => clearTimeout(timeout);
+  });
 
   function syncScroll(textarea, highlightEl) {
     if (highlightEl) {
@@ -118,6 +136,9 @@
     if (saved !== null) {
       htmlInput = saved;
     }
+    // Initialize syntax highlighting immediately
+    highlightedInput = highlightHtml(htmlInput + '\n');
+    highlightedCode = highlightHtml(cheerioCode + '\n');
     execute();
   });
 </script>
@@ -149,6 +170,12 @@
           </svg>
         </span>
         <label for="html-input">HTML Input</label>
+        <button class="pretty-print-btn" onclick={() => htmlInput = prettyPrintHtml(htmlInput)} title="Pretty print HTML">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 7h16M4 12h16M4 17h10"/>
+          </svg>
+          <span>Format</span>
+        </button>
       </div>
       <div class="editor-container">
         <pre class="editor-highlight" aria-hidden="true" bind:this={htmlHighlightRef}><code>{@html highlightedInput}</code></pre>
@@ -336,6 +363,33 @@
     font-size: 0.75rem;
     color: var(--text-muted);
     font-family: var(--font-mono);
+  }
+
+  .pretty-print-btn {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .pretty-print-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-focus);
+  }
+
+  .pretty-print-btn svg {
+    width: 14px;
+    height: 14px;
   }
 
   .editor-container {
