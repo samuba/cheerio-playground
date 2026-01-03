@@ -113,7 +113,7 @@
       <svg viewBox="0 0 24 24" fill="currentColor">
         <polygon points="5,3 19,12 5,21" />
       </svg>
-      <span>Run</span>
+      <span>Run Cheerio Code</span>
       <kbd>⌘↵</kbd>
     </button>
 
@@ -268,7 +268,7 @@
     background: var(--bg-input);
     color: var(--text-primary);
     font-family: var(--font-mono);
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     line-height: 1.5;
     padding: 0.75rem;
   }
@@ -331,8 +331,6 @@
 
   .output-list {
     min-height: 120px;
-    max-height: 300px;
-    overflow: auto;
     padding: 0.5rem;
     display: flex;
     flex-direction: column;
@@ -371,7 +369,7 @@
     margin: 0;
     padding: 0.5rem;
     font-family: var(--font-mono);
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-word;
