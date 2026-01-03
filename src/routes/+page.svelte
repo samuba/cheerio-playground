@@ -4,7 +4,8 @@
   import Prism from 'prismjs';
   import 'prismjs/components/prism-markup.js';
 
-  const STORAGE_KEY = 'cheerio-playground-html';
+  const STORAGE_KEY_HTML = 'cheerio-playground-html';
+  const STORAGE_KEY_CODE = 'cheerio-playground-code';
   const defaultHtml = `<h1>Hello, Cheerio!</h1>
 <p class="main">This is a paragraph to parse.</p>
 <ul>
@@ -27,7 +28,18 @@
     const value = htmlInput;
     const timeout = setTimeout(() => {
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY, value);
+        localStorage.setItem(STORAGE_KEY_HTML, value);
+      }
+    }, 1000);
+    return () => clearTimeout(timeout);
+  });
+
+  // Save Cheerio code to localStorage when it changes (debounced)
+  $effect(() => {
+    const value = cheerioCode;
+    const timeout = setTimeout(() => {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY_CODE, value);
       }
     }, 1000);
     return () => clearTimeout(timeout);
@@ -131,10 +143,14 @@
   }
 
   onMount(() => {
-    // Load saved HTML from localStorage
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved !== null) {
-      htmlInput = saved;
+    // Load saved values from localStorage
+    const savedHtml = localStorage.getItem(STORAGE_KEY_HTML);
+    const savedCode = localStorage.getItem(STORAGE_KEY_CODE);
+    if (savedHtml !== null) {
+      htmlInput = savedHtml;
+    }
+    if (savedCode !== null) {
+      cheerioCode = savedCode;
     }
     // Initialize syntax highlighting immediately
     highlightedInput = highlightHtml(htmlInput + '\n');
