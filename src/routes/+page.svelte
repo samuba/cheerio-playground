@@ -1,6 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import * as cheerio from 'cheerio';
+  import Prism from 'prismjs';
+  import 'prismjs/components/prism-markup.js';
 
   let htmlInput = $state(`<h1>Hello, Cheerio!</h1>
 <p class="main">This is a paragraph to parse.</p>
@@ -14,6 +16,45 @@
   let outputItems = $state([]);
   let isError = $state(false);
 
+  function highlightHtml(code) {
+    return Prism.highlight(code, Prism.languages.markup, 'markup');
+  }
+
+  let highlightedInput = $derived(highlightHtml(htmlInput));
+  let highlightedCode = $derived(highlightHtml(cheerioCode));
+
+  function prettyPrintHtml(html) {
+    const tab = '  ';
+    let result = '';
+    let indent = 0;
+    
+    // Normalize and split by tags
+    const tokens = html.replace(/>\s+</g, '><').split(/(<[^>]+>)/g).filter(Boolean);
+    
+    for (const token of tokens) {
+      if (token.startsWith('</')) {
+        // Closing tag - decrease indent first
+        indent = Math.max(0, indent - 1);
+        result += tab.repeat(indent) + token + '\n';
+      } else if (token.startsWith('<') && !token.startsWith('<!')) {
+        // Opening tag
+        const isSelfClosing = token.endsWith('/>') || /^<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)/i.test(token);
+        const isVoid = /^<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)/i.test(token);
+        
+        result += tab.repeat(indent) + token + '\n';
+        
+        if (!isSelfClosing && !isVoid) {
+          indent++;
+        }
+      } else if (token.trim()) {
+        // Text content
+        result += tab.repeat(indent) + token.trim() + '\n';
+      }
+    }
+    
+    return result.trim();
+  }
+
   function execute() {
     try {
       const doc = cheerio.load(htmlInput);
@@ -25,7 +66,7 @@
           outputItems = ['(No elements found)'];
         } else {
           outputItems = result
-            .map((index, element) => doc.html(element))
+            .map((index, element) => prettyPrintHtml(doc.html(element)))
             .get();
         }
       } else if (typeof result === 'object' && result !== null) {
@@ -80,13 +121,16 @@
         </span>
         <label for="html-input">HTML Input</label>
       </div>
-      <textarea
-        id="html-input"
-        bind:value={htmlInput}
-        onkeydown={handleKeydown}
-        placeholder="Enter HTML here..."
-        spellcheck="false"
-      ></textarea>
+      <div class="editor-container">
+        <pre class="editor-highlight" aria-hidden="true"><code>{@html highlightedInput}</code></pre>
+        <textarea
+          id="html-input"
+          bind:value={htmlInput}
+          onkeydown={handleKeydown}
+          placeholder="Enter HTML here..."
+          spellcheck="false"
+        ></textarea>
+      </div>
     </div>
 
     <div class="panel code-panel">
@@ -100,13 +144,16 @@
         <label for="cheerio-code">Cheerio Code</label>
         <span class="hint">Use $ to access the loaded document</span>
       </div>
-      <textarea
-        id="cheerio-code"
-        bind:value={cheerioCode}
-        onkeydown={handleKeydown}
-        placeholder="$('.selector')"
-        spellcheck="false"
-      ></textarea>
+      <div class="editor-container">
+        <pre class="editor-highlight" aria-hidden="true"><code>{@html highlightedCode}</code></pre>
+        <textarea
+          id="cheerio-code"
+          bind:value={cheerioCode}
+          onkeydown={handleKeydown}
+          placeholder="$('.selector')"
+          spellcheck="false"
+        ></textarea>
+      </div>
     </div>
 
     <button class="run-button" onclick={execute}>
@@ -139,7 +186,7 @@
         {#each outputItems as item, i}
           <div class="output-item">
             <span class="item-index">{i + 1}</span>
-            <pre>{item}</pre>
+            <pre><code>{@html isError ? item : highlightHtml(item)}</code></pre>
           </div>
         {/each}
       </div>
@@ -260,25 +307,95 @@
     font-family: var(--font-mono);
   }
 
+  .editor-container {
+    position: relative;
+    background: var(--bg-input);
+  }
+
+  .editor-highlight {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow: hidden;
+    pointer-events: none;
+    color: var(--text-primary);
+    background: transparent;
+  }
+
+  .editor-highlight code {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+  }
+
   textarea {
+    position: relative;
     width: 100%;
     border: none;
     outline: none;
     resize: none;
-    background: var(--bg-input);
-    color: var(--text-primary);
+    background: transparent;
+    color: transparent;
+    caret-color: var(--text-primary);
     font-family: var(--font-mono);
     font-size: 0.75rem;
     line-height: 1.5;
     padding: 0.75rem;
   }
 
-  .html-panel textarea {
+  .html-panel .editor-container {
     height: 180px;
   }
 
-  .code-panel textarea {
+  .html-panel textarea {
+    height: 100%;
+  }
+
+  .code-panel .editor-container {
     height: 80px;
+  }
+
+  .code-panel textarea {
+    height: 100%;
+  }
+
+  /* Prism.js syntax highlighting - dark theme */
+  :global(.token.tag) {
+    color: #7ee787;
+  }
+
+  :global(.token.attr-name) {
+    color: #79c0ff;
+  }
+
+  :global(.token.attr-value) {
+    color: #a5d6ff;
+  }
+
+  :global(.token.punctuation) {
+    color: #8b949e;
+  }
+
+  :global(.token.comment) {
+    color: #8b949e;
+    font-style: italic;
+  }
+
+  :global(.token.string) {
+    color: #a5d6ff;
+  }
+
+  :global(.token.entity) {
+    color: #ffa657;
   }
 
   .run-button {

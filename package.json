@@ -15,7 +15,8 @@
     "vite": "^7.3.0"
   },
   "dependencies": {
-    "cheerio": "^1.0.0"
+    "cheerio": "^1.0.0",
+    "prismjs": "^1.30.0"
   },
   "type": "module"
 }
